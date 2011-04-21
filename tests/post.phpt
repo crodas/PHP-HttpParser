@@ -13,6 +13,8 @@ $obj = new HttpParser;
 for ($i=0; $i < 100000; $i++) {
     $obj->parse($query);
 }
+unset($obj);
+$obj = new HttpParser;
 $parsed = $obj->parse($query);
 var_dump($parsed);
 --EXPECTF--

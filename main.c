@@ -70,7 +70,6 @@ PHP_METHOD(httpparser, parse)
     size = http_parser_execute(parser, &httpSettings, buf, (size_t) len);
 
     if ((size_t)size != (size_t)len) {
-        printf("[%d] [%d] (%d)\n", size, len, is_request);fflush(stdout);
         RETURN_FALSE;
     }
 
