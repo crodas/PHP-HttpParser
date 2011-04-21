@@ -2,8 +2,23 @@
 Test if class exists
 --FILE--
 <?php
-$obj = new HttpParser;
+class FooParser extends HttpParser
+{
+    function onMessageBegin()
+    {
+    }
+
+    function onHeadersComplete()
+    {
+    }
+
+    function onMessageComplete()
+    {
+    }
+
+}
+$obj = new FooParser;
 var_dump($obj);
 --EXPECTF--
-object(httpparser)#%d (%d) {
+object(FooParser)#%d (%d) {
 }

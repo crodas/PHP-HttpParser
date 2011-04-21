@@ -33,19 +33,67 @@ zend_class_entry *httpparser_ce;
     } \
     parser = object->parser;
 
-#define METHOD(type) \
+#define CHECK_HTTP_METHOD(type) \
 case HTTP_##type: \
-    add_assoc_string(return_value, "method", #type, 1); \
-    break;
+    return #type; \
     
     
-
-void httpparser_free_storage(void *pointer TSRMLS_DC)
+static void _httpparser_free_storage(void *pointer TSRMLS_DC)
 {
 
     httpParserObj * object = pointer;
     efree(object->parser);
     efree(object);
+}
+
+// char * _httpparser_get_method(http_parsre * parser) {{{
+/**
+ *  Return the string value of the request method
+ *
+ */
+static char * _httpparser_get_method(http_parser * parser)
+{
+    switch (parser->method) {
+        CHECK_HTTP_METHOD(DELETE)
+        CHECK_HTTP_METHOD(GET)
+        CHECK_HTTP_METHOD(HEAD)
+        CHECK_HTTP_METHOD(POST)
+        CHECK_HTTP_METHOD(PUT)
+        /* pathological */
+        CHECK_HTTP_METHOD(CONNECT)
+        CHECK_HTTP_METHOD(OPTIONS)
+        CHECK_HTTP_METHOD(TRACE)
+        /* webdav */
+        CHECK_HTTP_METHOD(COPY)
+        CHECK_HTTP_METHOD(LOCK)
+        CHECK_HTTP_METHOD(MKCOL)
+        CHECK_HTTP_METHOD(MOVE)
+        CHECK_HTTP_METHOD(PROPFIND)
+        CHECK_HTTP_METHOD(PROPPATCH)
+        CHECK_HTTP_METHOD(UNLOCK)
+        /* subversion */
+        CHECK_HTTP_METHOD(REPORT)
+        CHECK_HTTP_METHOD(MKACTIVITY)
+        CHECK_HTTP_METHOD(CHECKOUT)
+        CHECK_HTTP_METHOD(MERGE)
+        /* upnp */
+        CHECK_HTTP_METHOD(MSEARCH)
+        CHECK_HTTP_METHOD(NOTIFY)
+        CHECK_HTTP_METHOD(SUBSCRIBE)
+        CHECK_HTTP_METHOD(UNSUBSCRIBE)
+    }
+}
+// }}}
+
+static httpParserObj * _httpparser_new()
+{
+    httpParserObj * object;
+
+    object = emalloc(sizeof(httpParserObj));
+    memset(object, 0,  sizeof(httpParserObj));
+    object->parser = emalloc(sizeof(http_parser));
+
+    return object;
 }
 
 PHP_METHOD(httpparser, parse)
@@ -60,58 +108,46 @@ PHP_METHOD(httpparser, parse)
     if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &buf, &len, &is_request) == FAILURE) {
         return;
     }
+}
+
+PHP_METHOD(httpparser, parseStr)
+{
+    char * buf;
+    int len;
+    size_t size;
+    zend_bool is_request = 1;
+    httpParserObj * object;
+
+    object = _httpparser_new();
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &buf, &len, &is_request) == FAILURE) {
+        return;
+    }
     
-    http_parser_init(parser, is_request ? HTTP_REQUEST : HTTP_RESPONSE);
+    http_parser_init(object->parser, is_request ? HTTP_REQUEST : HTTP_RESPONSE);
 
     /* initialize the http_parser */
     array_init(return_value);
-    parser->data = return_value;
+    object->variable = return_value;
+    object->parser->data = object;
     
-    size = http_parser_execute(parser, &httpSettings, buf, (size_t) len);
+    size = http_parser_execute(object->parser, &httpSettings, buf, (size_t) len);
 
     if ((size_t)size != (size_t)len) {
         RETURN_FALSE;
     }
 
     if (is_request) {
-        switch (parser->method) {
-            METHOD(DELETE)
-            METHOD(GET)
-            METHOD(HEAD)
-            METHOD(POST)
-            METHOD(PUT)
-            /* pathological */
-            METHOD(CONNECT)
-            METHOD(OPTIONS)
-            METHOD(TRACE)
-            /* webdav */
-            METHOD(COPY)
-            METHOD(LOCK)
-            METHOD(MKCOL)
-            METHOD(MOVE)
-            METHOD(PROPFIND)
-            METHOD(PROPPATCH)
-            METHOD(UNLOCK)
-            /* subversion */
-            METHOD(REPORT)
-            METHOD(MKACTIVITY)
-            METHOD(CHECKOUT)
-            METHOD(MERGE)
-            /* upnp */
-            METHOD(MSEARCH)
-            METHOD(NOTIFY)
-            METHOD(SUBSCRIBE)
-            METHOD(UNSUBSCRIBE)
-        }
+        add_assoc_string(return_value, "method", _httpparser_get_method(object->parser), 1);
     } else {
-        add_assoc_long(return_value, "status_code", (long)parser->status_code);
+        add_assoc_long(return_value, "status_code", (long)object->parser->status_code);
     }
 
-    add_assoc_long(return_value, "version_minor", (long)parser->http_minor);
-    add_assoc_long(return_value, "version_major", (long)parser->http_major);
+    add_assoc_long(return_value, "version_minor", (long)object->parser->http_minor);
+    add_assoc_long(return_value, "version_major", (long)object->parser->http_major);
 
+    _httpparser_free_storage(object);
 }
-
 
 zend_object_value httpparser_create_handler(zend_class_entry *type TSRMLS_DC)
 {
@@ -120,21 +156,25 @@ zend_object_value httpparser_create_handler(zend_class_entry *type TSRMLS_DC)
     httpParserObj * obj;
     
     /* malloc for object and the http_parser struct */
-    obj = emalloc(sizeof(httpParserObj));
-    obj->parser = emalloc(sizeof(http_parser));
-
+    obj = _httpparser_new(); 
 
     /* initialize the object */
-    zend_object_std_init(&obj->zo, type TSRMLS_CC);
+    zend_object_std_init(&obj->this, type TSRMLS_CC);
     
-    retval.handle   = zend_objects_store_put(obj, NULL, httpparser_free_storage, NULL TSRMLS_CC);
+    retval.handle   = zend_objects_store_put(obj, NULL, _httpparser_free_storage, NULL TSRMLS_CC);
     retval.handlers = &httpparser_object_handlers;
     
     return retval;
 }
 
 function_entry httpparser_methods[] = {
-    PHP_ME(httpparser, parse,     NULL,                             ZEND_ACC_PUBLIC)
+    PHP_ME(httpparser, parse,     NULL,      ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
+    PHP_ME(httpparser, parseStr,     NULL,   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC | ZEND_ACC_FINAL)
+
+    // events
+    ZEND_FENTRY(onMessageBegin,     NULL, NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_ABSTRACT)
+    ZEND_FENTRY(onHeadersComplete,  NULL, NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_ABSTRACT)
+    ZEND_FENTRY(onMessageComplete,  NULL, NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_ABSTRACT)
     {NULL, NULL, NULL}
 };
 

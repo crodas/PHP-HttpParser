@@ -22,11 +22,13 @@
 #include "php.h"
 
 extern zend_module_entry httpparser_module_entry;
+
 extern http_parser_settings httpSettings;
 
 typedef struct {
-    zend_object zo;
+    zend_object this;
     http_parser * parser;
+    zval * variable;
 } httpParserObj;
 
 

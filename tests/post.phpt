@@ -9,13 +9,10 @@ Content-Type: application/x-www-form-urlencoded
 Content-Length: 32
 
 home=Cosby&favorite+flavor=flies";
-$obj = new HttpParser;
 for ($i=0; $i < 100000; $i++) {
-    $obj->parse($query);
+    HttpParser::parseStr($query);
 }
-unset($obj);
-$obj = new HttpParser;
-$parsed = $obj->parse($query);
+$parsed = HttpParser::parseStr($query);
 var_dump($parsed);
 --EXPECTF--
 array(8) {

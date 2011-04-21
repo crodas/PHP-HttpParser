@@ -8,8 +8,7 @@ $request = array(
     "",
     "cesar=rodas",
 );
-$obj = new HttpParser;
-$parsed = $obj->parse(implode("\r\n", $request));
+$parsed = HttpParser::parseStr(implode("\r\n", $request));
 var_dump($parsed);
 --EXPECTF--
 array(8) {

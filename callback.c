@@ -19,35 +19,40 @@
 /*********************************
     Helper macros
 **********************************/
-#define CALLBACK_NAME(type) _httpparser_callback ##_## type
+#define CALLBACK_NAME(type) _httpparser_assign ##_## type
 #define CALLBACK(type) .on_##type = CALLBACK_NAME(type)
-#define CREATE_CALLBACK(type) \
+#define FUNCTION(type) \
     int CALLBACK_NAME(type) (http_parser * p, const char * buf, size_t len)  \
     { \
-        return httpparser_callback(#type, p, buf, len); \
+        return httpparser_assign(#type, p, buf, len); \
     } \
 
-#define CREATE_CALLBACK_EX(type) \
+#define FUNCTION_EX(type) \
     int CALLBACK_NAME(type) (http_parser * p, const char * buf, size_t len)  \
     { \
-        return httpparser_callback_ex(#type, p, buf, len); \
+        return httpparser_assign_ex(#type, p, buf, len); \
     } \
 
+#define CALL_METHOD(Class, Method, retval, thisptr)  PHP_FN(Class##_##Method)(0, retval, NULL, thisptr, 0 TSRMLS_CC);
 
-int httpparser_callback(char *type, http_parser *p, const char *buf, size_t len)
+
+int httpparser_assign(char *type, http_parser *p, const char *buf, size_t len)
 {
-    add_assoc_stringl(p->data, type, buf, len, 1);
+    httpParserObj * Parser;
+    Parser = (httpParserObj *)p->data;
+    add_assoc_stringl(Parser->variable, type, buf, len, 1);
     return 0;
 }
 
-int httpparser_callback_ex(char *type, http_parser *p, const char *buf, size_t len)
+int httpparser_assign_ex(char *type, http_parser *p, const char *buf, size_t len)
 {
-    zval * dest, **fnd, *tmp;
-    tmp = (zval *)p->data;
-    if (zend_hash_find(Z_ARRVAL_P(tmp), type, strlen(type)+1, (void**)&fnd) == FAILURE) {
+    zval * dest, **fnd;
+    httpParserObj * Parser;
+    Parser = (httpParserObj *)p->data;
+    if (zend_hash_find(Z_ARRVAL_P(Parser->variable), type, strlen(type)+1, (void**)&fnd) == FAILURE) {
         ALLOC_INIT_ZVAL(dest);
         array_init(dest);
-        add_assoc_zval(p->data, type, dest);
+        add_assoc_zval(Parser->variable, type, dest);
     } else {
         dest = *fnd;
     }
@@ -56,13 +61,23 @@ int httpparser_callback_ex(char *type, http_parser *p, const char *buf, size_t l
     return 0;
 }
 
-CREATE_CALLBACK(url)
-CREATE_CALLBACK(path)
-CREATE_CALLBACK_EX(header_field)
-CREATE_CALLBACK_EX(header_value)
-CREATE_CALLBACK(body)
-CREATE_CALLBACK(query_string)
-CREATE_CALLBACK(fragment)
+int http_parser_callback(char *type, http_parser *p)
+{
+    httpParserObj * Parser;
+    Parser = (httpParserObj *)p->data;
+    zval foo;
+    CALL_METHOD(httpparser, parseStr, &foo, Parser->this);
+
+    return 0;
+}
+
+FUNCTION(url)
+FUNCTION(path)
+FUNCTION(body)
+FUNCTION(query_string)
+FUNCTION(fragment)
+FUNCTION_EX(header_field)
+FUNCTION_EX(header_value)
 
 http_parser_settings httpSettings = {
     CALLBACK(url),
