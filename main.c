@@ -40,8 +40,11 @@ case HTTP_##type: \
     
     
 
-void httpparser_free_storage(void *object TSRMLS_DC)
+void httpparser_free_storage(void *pointer TSRMLS_DC)
 {
+
+    httpParserObj * object = pointer;
+    efree(object->parser);
     efree(object);
 }
 
@@ -56,55 +59,61 @@ PHP_METHOD(httpparser, parse)
 {
     INIT_OBJECT
     char * buf;
-    size_t len, size;
+    int len;
+    size_t size;
+    zend_bool is_request = 1;
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &buf, &size) == FAILURE) {
+
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &buf, &len, &is_request) == FAILURE) {
         return;
     }
-
-    http_parser_init(parser, HTTP_REQUEST);
+    
+    http_parser_init(parser, is_request ? HTTP_REQUEST : HTTP_RESPONSE);
 
     /* initialize the http_parser */
     array_init(return_value);
     parser->data = return_value;
     
-    len = http_parser_execute(parser, &httpSettings, buf, size);
+    size = http_parser_execute(parser, &httpSettings, buf, (size_t) len);
 
-    if (size != len) {
+    if ((size_t)size != (size_t)len) {
+        printf("[%d] [%d] (%d)\n", size, len, is_request);fflush(stdout);
         RETURN_FALSE;
     }
 
-    /* REQUEST METHOD {{{ */
-    switch (parser->method) {
-        METHOD(DELETE)
-        METHOD(GET)
-        METHOD(HEAD)
-        METHOD(POST)
-        METHOD(PUT)
-        /* pathological */
-        METHOD(CONNECT)
-        METHOD(OPTIONS)
-        METHOD(TRACE)
-        /* webdav */
-        METHOD(COPY)
-        METHOD(LOCK)
-        METHOD(MKCOL)
-        METHOD(MOVE)
-        METHOD(PROPFIND)
-        METHOD(PROPPATCH)
-        METHOD(UNLOCK)
-        /* subversion */
-        METHOD(REPORT)
-        METHOD(MKACTIVITY)
-        METHOD(CHECKOUT)
-        METHOD(MERGE)
-        /* upnp */
-        METHOD(MSEARCH)
-        METHOD(NOTIFY)
-        METHOD(SUBSCRIBE)
-        METHOD(UNSUBSCRIBE)
+    if (is_request) {
+        switch (parser->method) {
+            METHOD(DELETE)
+            METHOD(GET)
+            METHOD(HEAD)
+            METHOD(POST)
+            METHOD(PUT)
+            /* pathological */
+            METHOD(CONNECT)
+            METHOD(OPTIONS)
+            METHOD(TRACE)
+            /* webdav */
+            METHOD(COPY)
+            METHOD(LOCK)
+            METHOD(MKCOL)
+            METHOD(MOVE)
+            METHOD(PROPFIND)
+            METHOD(PROPPATCH)
+            METHOD(UNLOCK)
+            /* subversion */
+            METHOD(REPORT)
+            METHOD(MKACTIVITY)
+            METHOD(CHECKOUT)
+            METHOD(MERGE)
+            /* upnp */
+            METHOD(MSEARCH)
+            METHOD(NOTIFY)
+            METHOD(SUBSCRIBE)
+            METHOD(UNSUBSCRIBE)
+        }
+    } else {
+        add_assoc_long(return_value, "status_code", (long)parser->status_code);
     }
-    /* }}} */
 
     add_assoc_long(return_value, "version_minor", (long)parser->http_minor);
     add_assoc_long(return_value, "version_major", (long)parser->http_major);

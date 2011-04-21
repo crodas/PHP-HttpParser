@@ -18,9 +18,15 @@ array(8) {
   ["path"]=>
   string(10) "/some/path"
   ["header_field"]=>
-  string(14) "Content-Length"
+  array(1) {
+    [0]=>
+    string(14) "Content-Length"
+  }
   ["header_value"]=>
-  string(2) "11"
+  array(1) {
+    [0]=>
+    string(2) "11"
+  }
   ["body"]=>
   string(11) "cesar=rodas"
   ["method"]=>
