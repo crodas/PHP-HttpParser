@@ -48,13 +48,6 @@ void httpparser_free_storage(void *pointer TSRMLS_DC)
     efree(object);
 }
 
-
-PHP_METHOD(httpparser, __construct)
-{
-    INIT_OBJECT
-}
-
-
 PHP_METHOD(httpparser, parse)
 {
     INIT_OBJECT
@@ -142,14 +135,7 @@ zend_object_value httpparser_create_handler(zend_class_entry *type TSRMLS_DC)
 }
 
 function_entry httpparser_methods[] = {
-    PHP_ME(httpparser, __construct,    NULL,                        ZEND_ACC_PUBLIC | ZEND_ACC_CTOR)
     PHP_ME(httpparser, parse,     NULL,                             ZEND_ACC_PUBLIC)
-    /*PHP_ME(httpparser, __destruct,     NULL,                       ZEND_ACC_PUBLIC | ZEND_ACC_DTOR)
-    PHP_ME(httpparser, execute,        arginfo_httpparser_execute, ZEND_ACC_PUBLIC)
-    PHP_ME(httpparser, hasError,       NULL,                       ZEND_ACC_PUBLIC)
-    PHP_ME(httpparser, isFinished,     NULL,                       ZEND_ACC_PUBLIC)
-    PHP_ME(httpparser, getEnvironment, NULL,                       ZEND_ACC_PUBLIC) */
-
     {NULL, NULL, NULL}
 };
 
