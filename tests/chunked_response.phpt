@@ -13,11 +13,11 @@ array(7) {
   ["header_field"]=>
   array(3) {
     [0]=>
-    string(12) "Content-Type"
+    string(12) "content-type"
     [1]=>
-    string(9) "Webserver"
+    string(9) "webserver"
     [2]=>
-    string(17) "Transfer-Encoding"
+    string(17) "transfer-encoding"
   }
   ["header_value"]=>
   array(3) {

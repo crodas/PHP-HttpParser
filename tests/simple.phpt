@@ -19,7 +19,7 @@ array(9) {
   ["header_field"]=>
   array(1) {
     [0]=>
-    string(14) "Content-Length"
+    string(14) "content-length"
   }
   ["header_value"]=>
   array(1) {

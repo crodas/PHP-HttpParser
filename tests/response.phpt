@@ -22,21 +22,21 @@ array(6) {
   ["header_field"]=>
   array(8) {
     [0]=>
-    string(8) "Location"
+    string(8) "location"
     [1]=>
-    string(13) "Cache-Control"
+    string(13) "cache-control"
     [2]=>
-    string(12) "Content-Type"
+    string(12) "content-type"
     [3]=>
-    string(10) "Set-Cookie"
+    string(10) "set-cookie"
     [4]=>
-    string(4) "Date"
+    string(4) "date"
     [5]=>
-    string(6) "Server"
+    string(6) "server"
     [6]=>
-    string(14) "Content-Length"
+    string(14) "content-length"
     [7]=>
-    string(16) "X-XSS-Protection"
+    string(16) "x-xss-protection"
   }
   ["header_value"]=>
   array(8) {

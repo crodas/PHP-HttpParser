@@ -23,13 +23,13 @@ array(9) {
   ["header_field"]=>
   array(4) {
     [0]=>
-    string(4) "From"
+    string(4) "from"
     [1]=>
-    string(10) "User-Agent"
+    string(10) "user-agent"
     [2]=>
-    string(12) "Content-Type"
+    string(12) "content-type"
     [3]=>
-    string(14) "Content-Length"
+    string(14) "content-length"
   }
   ["header_value"]=>
   array(4) {

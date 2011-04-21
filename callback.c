@@ -22,7 +22,7 @@
 #define CALLBACK_NAME(type) _httpparser_assign ##_## type
 #define CALLBACK(type) .on_##type = CALLBACK_NAME(type)
 #define CREATE_FUNCTION(type, callback) \
-    int CALLBACK_NAME(type) (http_parser * p, const char * buf, size_t len)  \
+    static int CALLBACK_NAME(type) (http_parser * p, const char * buf, size_t len)  \
     { \
         return callback(#type, p, buf, len); \
     } \
@@ -34,17 +34,24 @@
 
 #define CALL_METHOD(Class, Method, retval, thisptr)  PHP_FN(Class##_##Method)(0, retval, NULL, thisptr, 0 TSRMLS_CC);
 
+static void strtolower(char * str, size_t len) {
+    size_t i;  
+    for (i = 0; i < len; ++i) {
+        if (str[i] >= 'A' && str[i] <= 'Z') {
+            str[i] = str[i] + 'a' - 'A';    
+        } 
+    }   
+}
 
-int httpparser_assign(char *type, http_parser *p, const char *buf, size_t len)
+static int httpparser_assign(char *type, http_parser *p, const char *buf, size_t len)
 {
     httpParserObj * Parser;
     Parser = (httpParserObj *)p->data;
     add_assoc_stringl(Parser->variable, type, buf, len, 1);
-FUNCTION_APPEND(body)
     return 0;
 }
 
-int httpparser_assign_ex(char *type, http_parser *p, const char *buf, size_t len)
+static int httpparser_assign_ex(char *type, http_parser *p, const char *buf, size_t len)
 {
     zval * dest, **fnd;
     httpParserObj * Parser;
@@ -57,11 +64,20 @@ int httpparser_assign_ex(char *type, http_parser *p, const char *buf, size_t len
         dest = *fnd;
     }
 
-    add_next_index_stringl(dest, buf, len, 1);
+    if (strcmp(type, "header_field") == 0) {
+        char * tmp;
+        tmp = emalloc(len);
+        memcpy(tmp, buf, len);
+        strtolower(tmp, len);
+
+        add_next_index_stringl(dest, tmp, len, 0);
+    } else {
+        add_next_index_stringl(dest, buf, len, 1);
+    }
     return 0;
 }
 
-int httpparser_append(char *type, http_parser *p, const char *buf, size_t len)
+static int httpparser_append(char *type, http_parser *p, const char *buf, size_t len)
 {
     zval * dest, **fnd;
     httpParserObj * Parser;
@@ -84,7 +100,7 @@ int httpparser_append(char *type, http_parser *p, const char *buf, size_t len)
     return 0;
 }
 
-int http_parser_callback(char *type, http_parser *p)
+static int http_parser_callback(char *type, http_parser *p)
 {
     httpParserObj * Parser;
     Parser = (httpParserObj *)p->data;
