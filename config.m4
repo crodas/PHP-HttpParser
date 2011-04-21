@@ -1,63 +1,61 @@
 dnl $Id$
-dnl config.m4 for extension webserver
 
-dnl Comments in this file start with the string 'dnl'.
-dnl Remove where necessary. This file will not work
-dnl without editing.
+PHP_ARG_WITH(httpparser, for httpparser support,
+    [  --with-httpparser             Include httpparser support])
 
-dnl If your extension references something external, use with:
+PHP_ARG_ENABLE(debug, whether to enable debugging support in example,
+        [  --enable-example-debug        example: Enable debugging support in example], no, no)
 
-dnl PHP_ARG_WITH(webserver, for webserver support,
-dnl Make sure that the comment is aligned:
-dnl [  --with-webserver             Include webserver support])
-
-dnl Otherwise use enable:
-
-dnl PHP_ARG_ENABLE(webserver, whether to enable webserver support,
-dnl Make sure that the comment is aligned:
-dnl [  --enable-webserver           Enable webserver support])
-
-if test "$PHP_WEBSERVER" != "no"; then
+if test "$PHP_httpparser" != "no"; then
   dnl Write more examples of tests here...
 
-  dnl # --with-webserver -> check with-path
+  dnl # --with-httpparser -> check with-path
   dnl SEARCH_PATH="/usr/local /usr"     # you might want to change this
-  dnl SEARCH_FOR="/include/webserver.h"  # you most likely want to change this
-  dnl if test -r $PHP_WEBSERVER/$SEARCH_FOR; then # path given as parameter
-  dnl   WEBSERVER_DIR=$PHP_WEBSERVER
+  dnl SEARCH_FOR="/include/httpparser.h"  # you most likely want to change this
+  dnl if test -r $PHP_httpparser/$SEARCH_FOR; then # path given as parameter
+  dnl   httpparser_DIR=$PHP_httpparser
   dnl else # search default path list
-  dnl   AC_MSG_CHECKING([for webserver files in default path])
+  dnl   AC_MSG_CHECKING([for httpparser files in default path])
   dnl   for i in $SEARCH_PATH ; do
   dnl     if test -r $i/$SEARCH_FOR; then
-  dnl       WEBSERVER_DIR=$i
+  dnl       httpparser_DIR=$i
   dnl       AC_MSG_RESULT(found in $i)
   dnl     fi
   dnl   done
   dnl fi
   dnl
-  dnl if test -z "$WEBSERVER_DIR"; then
+  dnl if test -z "$httpparser_DIR"; then
   dnl   AC_MSG_RESULT([not found])
-  dnl   AC_MSG_ERROR([Please reinstall the webserver distribution])
+  dnl   AC_MSG_ERROR([Please reinstall the httpparser distribution])
   dnl fi
 
-  dnl # --with-webserver -> add include path
-  dnl PHP_ADD_INCLUDE($WEBSERVER_DIR/include)
+  dnl # --with-httpparser -> add include path
+  dnl PHP_ADD_INCLUDE($httpparser_DIR/include)
 
-  dnl # --with-webserver -> check for lib and symbol presence
-  dnl LIBNAME=webserver # you may want to change this
-  dnl LIBSYMBOL=webserver # you most likely want to change this 
+  dnl # --with-httpparser -> check for lib and symbol presence
+  dnl LIBNAME=httpparser # you may want to change this
+  dnl LIBSYMBOL=httpparser # you most likely want to change this 
 
   dnl PHP_CHECK_LIBRARY($LIBNAME,$LIBSYMBOL,
   dnl [
-  dnl   PHP_ADD_LIBRARY_WITH_PATH($LIBNAME, $WEBSERVER_DIR/lib, WEBSERVER_SHARED_LIBADD)
-  dnl   AC_DEFINE(HAVE_WEBSERVERLIB,1,[ ])
+  dnl   PHP_ADD_LIBRARY_WITH_PATH($LIBNAME, $httpparser_DIR/lib, httpparser_SHARED_LIBADD)
+  dnl   AC_DEFINE(HAVE_httpparserLIB,1,[ ])
   dnl ],[
-  dnl   AC_MSG_ERROR([wrong webserver lib version or lib not found])
+  dnl   AC_MSG_ERROR([wrong httpparser lib version or lib not found])
   dnl ],[
-  dnl   -L$WEBSERVER_DIR/lib -lm
+  dnl   -L$httpparser_DIR/lib -lm
   dnl ])
   dnl
-  dnl PHP_SUBST(WEBSERVER_SHARED_LIBADD)
+  dnl PHP_SUBST(httpparser_SHARED_LIBADD)
 
-  PHP_NEW_EXTENSION(webserver, webserver.c, $ext_shared)
+  dnl if test "$PHP_DEBUG" != "no"; then
+    dnl OPT=-O0 -g -Wall -Wextra -Werror -Ihttp_parser/
+  dnl else 
+    dnl OPT_FAST=-O3 -DHTTP_PARSER_STRICT=0 -Ihttp_parser/
+  dnl fi
+
+  PHP_ADD_INCLUDE(http-parser)
+
+
+  PHP_NEW_EXTENSION(httpparser, main.c callback.c http-parser/http_parser.c, $ext_shared)
 fi
