@@ -1,5 +1,5 @@
 --TEST--
-Test if class exists
+Simple Parsing
 --FILE--
 <?php
 $request = array(

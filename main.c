@@ -17,7 +17,7 @@
 #include <httpparser.h>
 
 zend_object_handlers httpparser_object_handlers;
-zend_class_entry *httpparser_ce;
+zend_class_entry *httpparser_ce, *httpparser_exception_ce;
 
 /*********************************
     Helper macros
@@ -37,14 +37,6 @@ zend_class_entry *httpparser_ce;
 case HTTP_##type: \
     return #type; \
     
-    
-static void _httpparser_free_storage(void *pointer TSRMLS_DC)
-{
-
-    httpParserObj * object = pointer;
-    efree(object->parser);
-    efree(object);
-}
 
 // char * _httpparser_get_method(http_parsre * parser) {{{
 /**
@@ -96,12 +88,36 @@ static httpParserObj * _httpparser_new()
     return object;
 }
 
+static void _httpparser_free_storage(void *pointer TSRMLS_DC)
+{
+
+    httpParserObj * object = pointer;
+    efree(object->parser);
+    efree(object);
+}
+
+static void _httpparser_throw_exception(char * message, int offset TSRMLS_DC)
+{
+    zval * object;
+    char exception[220];
+    MAKE_STD_ZVAL(object);
+    
+    sprintf(exception, "%s at char %d", message, offset);
+
+    object_init_ex(object, httpparser_exception_ce);
+    zend_update_property_string(httpparser_exception_ce, object, "message", sizeof("message") - 1,
+        exception TSRMLS_CC);
+    zend_update_property_long(httpparser_exception_ce, object, "offset", sizeof("offset") - 1,
+        (long)offset TSRMLS_CC);
+    zend_throw_exception_object(object TSRMLS_CC);
+}
+
 PHP_METHOD(httpparser, parse)
 {
     INIT_OBJECT
     char * buf;
     int len;
-    size_t size;
+    size_t offset;
     zend_bool is_request = 1;
 
 
@@ -114,7 +130,7 @@ PHP_METHOD(httpparser, parseStr)
 {
     char * buf;
     int len;
-    size_t size;
+    size_t offset;
     zend_bool is_request = 1;
     httpParserObj * object;
 
@@ -131,10 +147,11 @@ PHP_METHOD(httpparser, parseStr)
     object->variable = return_value;
     object->parser->data = object;
     
-    size = http_parser_execute(object->parser, &httpSettings, buf, (size_t) len);
+    offset = http_parser_execute(object->parser, &httpSettings, buf, (size_t) len);
 
-    if ((size_t)size != (size_t)len) {
-        RETURN_FALSE;
+    if ((size_t)offset != (size_t)len) {
+        _httpparser_throw_exception("Error while parsing HTTP", offset TSRMLS_CC);
+        return;
     }
 
     if (is_request) {
@@ -180,10 +197,15 @@ function_entry httpparser_methods[] = {
 
 PHP_MINIT_FUNCTION(httpparser)
 {
-    zend_class_entry ce;
+    zend_class_entry ce, exception_ce;
     INIT_CLASS_ENTRY(ce, "httpparser", httpparser_methods);
     httpparser_ce = zend_register_internal_class(&ce TSRMLS_CC);
     httpparser_ce->create_object = httpparser_create_handler;
+
+    INIT_CLASS_ENTRY(exception_ce, "httpparser_exception", NULL);
+
+    httpparser_exception_ce = zend_register_internal_class_ex(&exception_ce,  zend_exception_get_default(TSRMLS_C), NULL TSRMLS_CC);
+
 
     memcpy(&httpparser_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
     httpparser_object_handlers.clone_obj = NULL;

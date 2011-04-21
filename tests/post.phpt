@@ -1,5 +1,5 @@
 --TEST--
-Test if class exists
+Test a POST request with body
 --FILE--
 <?php
 $query = "POST /path/script.cgi HTTP/1.0
