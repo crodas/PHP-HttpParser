@@ -11,7 +11,7 @@ $request = array(
 $parsed = HttpParser::parseStr(implode("\r\n", $request));
 var_dump($parsed);
 --EXPECTF--
-array(8) {
+array(9) {
   ["url"]=>
   string(10) "/some/path"
   ["path"]=>
@@ -30,6 +30,8 @@ array(8) {
   string(11) "cesar=rodas"
   ["method"]=>
   string(4) "POST"
+  ["keep-alive"]=>
+  bool(true)
   ["version_minor"]=>
   int(1)
   ["version_major"]=>

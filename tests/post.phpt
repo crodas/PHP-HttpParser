@@ -15,7 +15,7 @@ for ($i=0; $i < 100000; $i++) {
 $parsed = HttpParser::parseStr($query);
 var_dump($parsed);
 --EXPECTF--
-array(8) {
+array(9) {
   ["url"]=>
   string(16) "/path/script.cgi"
   ["path"]=>
@@ -46,6 +46,8 @@ array(8) {
   string(32) "home=Cosby&favorite+flavor=flies"
   ["method"]=>
   string(4) "POST"
+  ["keep-alive"]=>
+  bool(false)
   ["version_minor"]=>
   int(0)
   ["version_major"]=>

@@ -18,7 +18,7 @@ for ($i=0; $i < 100000; $i++) {
 $parsed = HttpParser::parseStr($string, false);
 var_dump($parsed);
 --EXPECTF--
-array(5) {
+array(6) {
   ["header_field"]=>
   array(8) {
     [0]=>
@@ -59,6 +59,8 @@ array(5) {
   }
   ["status_code"]=>
   int(302)
+  ["keep-alive"]=>
+  bool(true)
   ["version_minor"]=>
   int(1)
   ["version_major"]=>

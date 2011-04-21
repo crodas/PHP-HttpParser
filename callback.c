@@ -21,17 +21,16 @@
 **********************************/
 #define CALLBACK_NAME(type) _httpparser_assign ##_## type
 #define CALLBACK(type) .on_##type = CALLBACK_NAME(type)
-#define FUNCTION(type) \
+#define CREATE_FUNCTION(type, callback) \
     int CALLBACK_NAME(type) (http_parser * p, const char * buf, size_t len)  \
     { \
-        return httpparser_assign(#type, p, buf, len); \
+        return callback(#type, p, buf, len); \
     } \
 
-#define FUNCTION_EX(type) \
-    int CALLBACK_NAME(type) (http_parser * p, const char * buf, size_t len)  \
-    { \
-        return httpparser_assign_ex(#type, p, buf, len); \
-    } \
+#define FUNCTION(type) CREATE_FUNCTION(type, httpparser_assign)
+
+#define FUNCTION_PUSH(type) CREATE_FUNCTION(type, httpparser_assign_ex)
+#define FUNCTION_APPEND(type) CREATE_FUNCTION(type, httpparser_append)
 
 #define CALL_METHOD(Class, Method, retval, thisptr)  PHP_FN(Class##_##Method)(0, retval, NULL, thisptr, 0 TSRMLS_CC);
 
@@ -41,6 +40,7 @@ int httpparser_assign(char *type, http_parser *p, const char *buf, size_t len)
     httpParserObj * Parser;
     Parser = (httpParserObj *)p->data;
     add_assoc_stringl(Parser->variable, type, buf, len, 1);
+FUNCTION_APPEND(body)
     return 0;
 }
 
@@ -61,6 +61,29 @@ int httpparser_assign_ex(char *type, http_parser *p, const char *buf, size_t len
     return 0;
 }
 
+int httpparser_append(char *type, http_parser *p, const char *buf, size_t len)
+{
+    zval * dest, **fnd;
+    httpParserObj * Parser;
+    Parser = (httpParserObj *)p->data;
+    if (zend_hash_find(Z_ARRVAL_P(Parser->variable), type, strlen(type)+1, (void**)&fnd) == FAILURE) {
+        ALLOC_INIT_ZVAL(dest);
+        array_init(dest);
+        add_assoc_stringl(Parser->variable, type, buf, len, 1);
+    } else {
+        dest = *fnd;
+        convert_to_string(dest);
+
+        /* Enlarge a's buffer to hold the additional data */
+        Z_STRVAL_P(dest) = erealloc(Z_STRVAL_P(dest), Z_STRLEN_P(dest) + len + 1);
+        memcpy(Z_STRVAL_P(dest) + Z_STRLEN_P(dest),  buf, len);
+        Z_STRLEN_P(dest) += len;
+
+    }
+
+    return 0;
+}
+
 int http_parser_callback(char *type, http_parser *p)
 {
     httpParserObj * Parser;
@@ -73,11 +96,11 @@ int http_parser_callback(char *type, http_parser *p)
 
 FUNCTION(url)
 FUNCTION(path)
-FUNCTION(body)
 FUNCTION(query_string)
 FUNCTION(fragment)
-FUNCTION_EX(header_field)
-FUNCTION_EX(header_value)
+FUNCTION_PUSH(header_field)
+FUNCTION_PUSH(header_value)
+FUNCTION_APPEND(body)
 
 http_parser_settings httpSettings = {
     CALLBACK(url),
