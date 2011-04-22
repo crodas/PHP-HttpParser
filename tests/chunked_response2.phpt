@@ -8,7 +8,7 @@ $response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nWebserver: Foobar\r\
 $body = '';
 $len  = rand(1000000, 2000000);
 for ($i=0; $i < $len; $i++) {
-    $body .= chr(rand(1, 255));
+    $body .= chr(rand(0, 255));
 }
 
 for ($i=0; $i < $len; $i += $size) {
