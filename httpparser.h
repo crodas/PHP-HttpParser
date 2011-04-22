@@ -26,8 +26,14 @@ extern zend_module_entry httpparser_module_entry;
 extern http_parser_settings httpSettings;
 
 typedef struct {
+    /* zend object */
     zend_object this;
+    zval * pThis;
+
+    /* http_parser struct */
     http_parser * parser;
+
+    /* variable where to store the parsed HTTP */
     zval * variable;
 } httpParserObj;
 

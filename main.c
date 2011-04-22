@@ -17,7 +17,7 @@
 #include <httpparser.h>
 
 zend_object_handlers httpparser_object_handlers;
-zend_class_entry *httpparser_ce, *httpparser_exception_ce;
+zend_class_entry * httpparser_ce, * httpparser_exception_ce;
 
 /*********************************
     Helper macros
@@ -31,7 +31,9 @@ zend_class_entry *httpparser_ce, *httpparser_exception_ce;
         php_error_docref(NULL TSRMLS_CC, E_WARNING, "Constructor was not called");    \
         return; \
     } \
-    parser = object->parser;
+    parser = object->parser; \
+    object->pThis = this;
+
 
 #define CHECK_HTTP_METHOD(type) \
 case HTTP_##type: \
@@ -79,12 +81,14 @@ PHP_METHOD(httpparser, parse)
     char * buf;
     int len;
     size_t offset;
-    zend_bool is_request = 1;
 
 
-    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s|b", &buf, &len, &is_request) == FAILURE) {
+    if (zend_parse_parameters(ZEND_NUM_ARGS() TSRMLS_CC, "s", &buf, &len) == FAILURE) {
         return;
     }
+
+    object->parser->data = object;
+    offset = http_parser_execute(object->parser, &httpSettings, buf, (size_t) len);
 }
 
 PHP_METHOD(httpparser, parseStr)
@@ -130,15 +134,34 @@ PHP_METHOD(httpparser, parseStr)
 
 zend_object_value httpparser_create_handler(zend_class_entry *type TSRMLS_DC)
 {
-    zval *tmp;
+    zval *tmp1;
     zend_object_value retval;
     httpParserObj * obj;
     
     /* malloc for object and the http_parser struct */
     obj = _httpparser_new(); 
+    /* by default prepare to parse request/response */
+    http_parser_init(obj->parser, HTTP_BOTH);
 
     /* initialize the object */
     zend_object_std_init(&obj->this, type TSRMLS_CC);
+
+    /* copy the standard properties */
+    #if PHP_VERSION_ID < 50399
+    zend_hash_copy(
+        obj->this.properties,
+        &type->default_properties,
+        (copy_ctor_func_t) zval_add_ref,
+        (void *) &tmp1,
+        sizeof(zval *)
+    );
+    #else
+        object_properties_init(&obj->this, type);
+    #endif
+
+    MAKE_STD_ZVAL(obj->variable);
+    array_init(obj->variable);
+    zend_hash_add(obj->this.properties, "parts", 6,  &obj->variable, sizeof(zval *), NULL);
     
     retval.handle   = zend_objects_store_put(obj, NULL, _httpparser_free_storage, NULL TSRMLS_CC);
     retval.handlers = &httpparser_object_handlers;
@@ -151,9 +174,9 @@ function_entry httpparser_methods[] = {
     PHP_ME(httpparser, parseStr,     NULL,   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC | ZEND_ACC_FINAL)
 
     // events
-    ZEND_FENTRY(onMessageBegin,     NULL, NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_ABSTRACT)
-    ZEND_FENTRY(onHeadersComplete,  NULL, NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_ABSTRACT)
-    ZEND_FENTRY(onMessageComplete,  NULL, NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_ABSTRACT)
+    ZEND_FENTRY(onMessageBegin,     NULL, NULL,  ZEND_ACC_PROTECTED | ZEND_ACC_ABSTRACT)
+    ZEND_FENTRY(onHeadersComplete,  NULL, NULL,  ZEND_ACC_PROTECTED | ZEND_ACC_ABSTRACT)
+    ZEND_FENTRY(onMessageComplete,  NULL, NULL,  ZEND_ACC_PROTECTED | ZEND_ACC_ABSTRACT)
     {NULL, NULL, NULL}
 };
 
@@ -164,10 +187,12 @@ PHP_MINIT_FUNCTION(httpparser)
     httpparser_ce = zend_register_internal_class(&ce TSRMLS_CC);
     httpparser_ce->create_object = httpparser_create_handler;
 
+    zend_declare_property_string(httpparser_ce, "status", 6, "idle",   ZEND_ACC_PRIVATE TSRMLS_CC);
+    zend_declare_property_string(httpparser_ce, "type", 4, "unknown",  ZEND_ACC_PRIVATE TSRMLS_CC);
+
     INIT_CLASS_ENTRY(exception_ce, "httpparser_exception", NULL);
 
     httpparser_exception_ce = zend_register_internal_class_ex(&exception_ce,  zend_exception_get_default(TSRMLS_C), NULL TSRMLS_CC);
-
 
     memcpy(&httpparser_object_handlers, zend_get_std_object_handlers(), sizeof(zend_object_handlers));
     httpparser_object_handlers.clone_obj = NULL;

@@ -15,6 +15,7 @@
 */
 #include <http_parser.h>
 #include <httpparser.h>
+#include <zend_interfaces.h>
 
 /*********************************
     Helper macros
@@ -31,8 +32,24 @@
 
 #define FUNCTION_PUSH(type) CREATE_FUNCTION(type, httpparser_assign_ex)
 #define FUNCTION_APPEND(type) CREATE_FUNCTION(type, httpparser_append)
+#define FUNCTION_CALLBACK(type) CREATE_FUNCTION(type, httpparser_callback)
 
-#define CALL_METHOD(Class, Method, retval, thisptr)  PHP_FN(Class##_##Method)(0, retval, NULL, thisptr, 0 TSRMLS_CC);
+#define CALL_METHOD(object, method_name, return_value) do {\
+        char tmp[100], *t = method_name; \
+        int i = 2; \
+        strcpy(tmp, "on"); \
+        for (; *t; t++) { \
+            if (*t != '_') { \
+                tmp[i++] =  *t; \
+            } \
+        } \
+        tmp[i] = '\0'; \
+        zend_call_method( \
+            &object->pThis, Z_OBJCE_P(object->pThis), (zend_function**)NULL,  \
+            tmp, i, return_value, 0, (zval*)NULL, (zval*)NULL TSRMLS_CC \
+        );  \
+    } while(0);
+
 
 static void strtolower(char * str, size_t len) {
     size_t i;  
@@ -100,12 +117,16 @@ static int httpparser_append(char *type, http_parser *p, const char *buf, size_t
     return 0;
 }
 
-static int http_parser_callback(char *type, http_parser *p)
+static int httpparser_callback(char *type, http_parser *p, const char * f, int len)
 {
     httpParserObj * Parser;
-    Parser = (httpParserObj *)p->data;
     zval foo;
-    CALL_METHOD(httpparser, parseStr, &foo, Parser->this);
+
+    Parser = (httpParserObj *)p->data;
+
+    if (Parser->pThis) {
+        CALL_METHOD(Parser, type, &foo);
+    }
 
     return 0;
 }
@@ -117,6 +138,7 @@ FUNCTION(fragment)
 FUNCTION_PUSH(header_field)
 FUNCTION_PUSH(header_value)
 FUNCTION_APPEND(body)
+FUNCTION_CALLBACK(headers_complete)
 
 http_parser_settings httpSettings = {
     CALLBACK(url),
@@ -125,5 +147,6 @@ http_parser_settings httpSettings = {
     CALLBACK(path),
     CALLBACK(body),
     CALLBACK(header_field),
-    CALLBACK(header_value)
+    CALLBACK(header_value),
+    CALLBACK(headers_complete)
 };

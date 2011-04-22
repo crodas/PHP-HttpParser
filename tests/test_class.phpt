@@ -4,15 +4,15 @@ Test if class exists
 <?php
 class FooParser extends HttpParser
 {
-    function onMessageBegin()
+    protected function onMessageBegin()
     {
     }
 
-    function onHeadersComplete()
+    protected function onHeadersComplete()
     {
     }
 
-    function onMessageComplete()
+    protected function onMessageComplete()
     {
     }
 
@@ -21,4 +21,11 @@ $obj = new FooParser;
 var_dump($obj);
 --EXPECTF--
 object(FooParser)#%d (%d) {
+  ["status":"httpparser":private]=>
+  string(4) "idle"
+  ["type":"httpparser":private]=>
+  string(7) "unknown"
+  ["parts"]=>
+  array(0) {
+  }
 }
