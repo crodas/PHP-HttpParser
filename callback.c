@@ -45,7 +45,7 @@
         } \
         tmp[i] = '\0'; \
         zend_call_method( \
-            &object->pThis, Z_OBJCE_P(object->pThis), (zend_function**)NULL,  \
+            &object, Z_OBJCE_P(object), (zend_function**)NULL,  \
             tmp, i, return_value, 0, (zval*)NULL, (zval*)NULL TSRMLS_CC \
         );  \
     } while(0);
@@ -125,7 +125,7 @@ static int httpparser_callback(char *type, http_parser *p, const char * f, int l
     Parser = (httpParserObj *)p->data;
 
     if (Parser->pThis) {
-        CALL_METHOD(Parser, type, &foo);
+        CALL_METHOD(Parser->pThis, type, &foo);
     }
 
     return 0;
