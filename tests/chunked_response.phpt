@@ -1,5 +1,5 @@
 --TEST--
-Test Parsing HTTP Response 
+Test Parsing HTTP Chunked Response 
 --FILE--
 <?php
 $string = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nWebserver: Foobar\r\nTransfer-Encoding: chunked\r\n\r\n25\r\nThis is the data in the first chunk\r\n\r\n1C\r\nand this is the second one\r\n\r\n3\r\ncon\r\n8\r\nsequence\r\n0\r\n\r\n";
