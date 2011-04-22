@@ -35,10 +35,15 @@ zend_class_entry * httpparser_ce, * httpparser_exception_ce;
     object->pThis = this;
 
 
-#define CHECK_HTTP_METHOD(type) \
-case HTTP_##type: \
-    return #type; \
-    
+#define GETTER(name) { \
+    INIT_OBJECT  \
+    RETURN_PROPERTY(name)\
+}
+
+#define RETURN_PROPERTY(name) \
+    zval *tmp = zend_read_property(httpparser_ce, this, ZEND_STRL(name), 0  TSRMLS_DC); \
+    *return_value = *tmp; \
+    zval_copy_ctor(return_value); \
 
 static httpParserObj * _httpparser_new()
 {
@@ -55,6 +60,9 @@ static void _httpparser_free_storage(void *pointer TSRMLS_DC)
 {
 
     httpParserObj * object = pointer;
+    if (object->variable && object->free_variable) {
+        zval_ptr_dtor(&object->variable);
+    }
     efree(object->parser);
     efree(object);
 }
@@ -95,8 +103,20 @@ PHP_METHOD(httpparser, parse)
         RETURN_FALSE;
     }
 
+    zval * status_str;
+    status_str = zend_read_property(httpparser_ce, this, "status", 6, 0  TSRMLS_DC);
+    ZVAL_STRING(status_str, "working", 1);
     RETURN_TRUE;
 }
+
+PHP_METHOD(httpparser, getStatus)
+    GETTER("status")
+
+PHP_METHOD(httpparser, getParserType)
+    GETTER("type")
+
+PHP_METHOD(httpparser, getParts)
+    GETTER("parts")
 
 PHP_METHOD(httpparser, parseStr)
 {
@@ -139,7 +159,7 @@ PHP_METHOD(httpparser, parseStr)
     _httpparser_free_storage(object);
 }
 
-zend_object_value httpparser_create_handler(zend_class_entry *type TSRMLS_DC)
+zend_object_value httpparser_create_handler(zend_class_entry *class_type TSRMLS_DC)
 {
     zval *tmp1;
     zend_object_value retval;
@@ -147,28 +167,31 @@ zend_object_value httpparser_create_handler(zend_class_entry *type TSRMLS_DC)
     
     /* malloc for object and the http_parser struct */
     obj = _httpparser_new(); 
+
     /* by default prepare to parse request/response */
     http_parser_init(obj->parser, HTTP_BOTH);
 
     /* initialize the object */
-    zend_object_std_init(&obj->this, type TSRMLS_CC);
+    zend_object_std_init(&obj->this, class_type TSRMLS_CC);
 
     /* copy the standard properties */
     #if PHP_VERSION_ID < 50399
     zend_hash_copy(
         obj->this.properties,
-        &type->default_properties,
+        &class_type->default_properties,
         (copy_ctor_func_t) zval_add_ref,
         (void *) &tmp1,
         sizeof(zval *)
     );
     #else
-        object_properties_init(&obj->this, type);
+        object_properties_init(&obj->this, class_type);
     #endif
 
     MAKE_STD_ZVAL(obj->variable);
     array_init(obj->variable);
     zend_hash_add(obj->this.properties, "parts", 6,  &obj->variable, sizeof(zval *), NULL);
+    obj->free_variable = 1;
+
     
     retval.handle   = zend_objects_store_put(obj, NULL, _httpparser_free_storage, NULL TSRMLS_CC);
     retval.handlers = &httpparser_object_handlers;
@@ -179,6 +202,9 @@ zend_object_value httpparser_create_handler(zend_class_entry *type TSRMLS_DC)
 function_entry httpparser_methods[] = {
     PHP_ME(httpparser, parse,     NULL,      ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
     PHP_ME(httpparser, parseStr,     NULL,   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC | ZEND_ACC_FINAL)
+    PHP_ME(httpparser, getParserType,     NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
+    PHP_ME(httpparser, getStatus,     NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
+    PHP_ME(httpparser, getParts,     NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
 
     // events
     ZEND_FENTRY(onMessageBegin,     NULL, NULL,  ZEND_ACC_PROTECTED | ZEND_ACC_ABSTRACT)
@@ -194,8 +220,8 @@ PHP_MINIT_FUNCTION(httpparser)
     httpparser_ce = zend_register_internal_class(&ce TSRMLS_CC);
     httpparser_ce->create_object = httpparser_create_handler;
 
-    zend_declare_property_string(httpparser_ce, "status", 6, "idle",   ZEND_ACC_PRIVATE TSRMLS_CC);
-    zend_declare_property_string(httpparser_ce, "type", 4, "unknown",  ZEND_ACC_PRIVATE TSRMLS_CC);
+    zend_declare_property_string(httpparser_ce, ZEND_STRL("status"), "idle",   ZEND_ACC_PRIVATE TSRMLS_CC);
+    zend_declare_property_string(httpparser_ce, ZEND_STRL("type"), "both",  ZEND_ACC_PRIVATE TSRMLS_CC);
 
     INIT_CLASS_ENTRY(exception_ce, "httpparser_exception", NULL);
 

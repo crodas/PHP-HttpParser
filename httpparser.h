@@ -35,6 +35,7 @@ typedef struct {
 
     /* variable where to store the parsed HTTP */
     zval * variable;
+    short free_variable;
 } httpParserObj;
 
 

@@ -24,7 +24,7 @@ object(FooParser)#%d (%d) {
   ["status":"httpparser":private]=>
   string(4) "idle"
   ["type":"httpparser":private]=>
-  string(7) "unknown"
+  string(4) "both"
   ["parts"]=>
   array(0) {
   }

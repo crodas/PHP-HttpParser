@@ -33,13 +33,19 @@ $parser = new CustomParser;
 
 list($header, $body) = explode("\n\n", $query, 2);
 
+var_dump($parser->getParserType());
+var_dump($parser->getStatus());
 foreach (explode("\n", $header) as $line) {
     $line = trim($line)."\r\n";
     $parser->parse($line);
 }
+var_dump($parser->getStatus());
 $parser->parse("\r\n");
 $parser->parse($body);
 --EXPECTF--
+string(4) "both"
+string(4) "idle"
+string(7) "working"
 array(4) {
   ["url"]=>
   string(16) "/path/script.cgi"
