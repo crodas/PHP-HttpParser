@@ -89,6 +89,13 @@ PHP_METHOD(httpparser, parse)
 
     object->parser->data = object;
     offset = http_parser_execute(object->parser, &httpSettings, buf, (size_t) len);
+
+    if ((size_t)offset != (size_t)len) {
+        _httpparser_throw_exception("Error while parsing HTTP", offset TSRMLS_CC);
+        RETURN_FALSE;
+    }
+
+    RETURN_TRUE;
 }
 
 PHP_METHOD(httpparser, parseStr)

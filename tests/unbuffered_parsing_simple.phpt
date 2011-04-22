@@ -31,9 +31,14 @@ class CustomParser extends HttpParser
 
 $parser = new CustomParser;
 
-foreach (explode("\r\n", $query) as $line) {
-    $parser->parse($line . "\r\n");
+list($header, $body) = explode("\n\n", $query);
+
+foreach (explode("\n", $header) as $line) {
+    $line = trim($line)."\r\n";
+    $parser->parse($line);
 }
+$parser->parse("\n");
+$parser->parse($body);
 --EXPECTF--
 array(4) {
   ["url"]=>
