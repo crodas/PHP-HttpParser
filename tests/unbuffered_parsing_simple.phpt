@@ -31,13 +31,13 @@ class CustomParser extends HttpParser
 
 $parser = new CustomParser;
 
-list($header, $body) = explode("\n\n", $query);
+list($header, $body) = explode("\n\n", $query, 2);
 
 foreach (explode("\n", $header) as $line) {
     $line = trim($line)."\r\n";
     $parser->parse($line);
 }
-$parser->parse("\n");
+$parser->parse("\r\n");
 $parser->parse($body);
 --EXPECTF--
 array(4) {
