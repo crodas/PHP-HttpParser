@@ -139,8 +139,11 @@ FUNCTION_PUSH(header_field)
 FUNCTION_PUSH(header_value)
 FUNCTION_APPEND(body)
 FUNCTION_CALLBACK(headers_complete)
+FUNCTION_CALLBACK(message_begin)
+FUNCTION_CALLBACK(message_complete)
 
 http_parser_settings httpSettings = {
+    /* callbacks */
     CALLBACK(url),
     CALLBACK(query_string),
     CALLBACK(fragment),
@@ -148,5 +151,9 @@ http_parser_settings httpSettings = {
     CALLBACK(body),
     CALLBACK(header_field),
     CALLBACK(header_value),
-    CALLBACK(headers_complete)
+
+    /* callbacks with no data  */
+    CALLBACK(headers_complete),
+    CALLBACK(message_begin),
+    CALLBACK(message_complete)
 };

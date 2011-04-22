@@ -12,9 +12,10 @@ home=Cosby&favorite+flavor=flies";
 
 class CustomParser extends HttpParser 
 {
+    protected $has_body = false;
     protected function onMessageBegin()
     {
-        var_dump('parsing message');
+        $this->has_body = true;
     }
 
     protected function onHeadersComplete()
@@ -24,7 +25,7 @@ class CustomParser extends HttpParser
 
     protected function onMessageComplete()
     {
-        var_dump('ended');
+        var_dump($this->parts);
     }
 }
 
@@ -61,4 +62,34 @@ array(4) {
     [3]=>
     string(2) "32"
   }
+}
+array(5) {
+  ["url"]=>
+  string(16) "/path/script.cgi"
+  ["path"]=>
+  string(16) "/path/script.cgi"
+  ["header_field"]=>
+  array(4) {
+    [0]=>
+    string(4) "from"
+    [1]=>
+    string(10) "user-agent"
+    [2]=>
+    string(12) "content-type"
+    [3]=>
+    string(14) "content-length"
+  }
+  ["header_value"]=>
+  array(4) {
+    [0]=>
+    string(18) "frog@jmarshall.com"
+    [1]=>
+    string(12) "HTTPTool/1.0"
+    [2]=>
+    string(33) "application/x-www-form-urlencoded"
+    [3]=>
+    string(2) "32"
+  }
+  ["body"]=>
+  string(32) "home=Cosby&favorite+flavor=flies"
 }
