@@ -35,8 +35,12 @@ typedef struct {
 
     /* variable where to store the parsed HTTP */
     zval * variable;
-    short free_variable;
-} httpParserObj;
+    enum http_parser_type status;
+    short type;
 
+    /* should we free the zval * variable? */
+    short free_variable;
+    
+} httpParserObj;
 
 #endif /* PHP_httpparser_H */

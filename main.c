@@ -35,15 +35,22 @@ zend_class_entry * httpparser_ce, * httpparser_exception_ce;
     object->pThis = this;
 
 
-#define GETTER(name) { \
+#define GETTER_PROPERTY(name) { \
     INIT_OBJECT  \
-    RETURN_PROPERTY(name)\
-}
-
-#define RETURN_PROPERTY(name) \
     zval *tmp = zend_read_property(httpparser_ce, this, ZEND_STRL(name), 0  TSRMLS_DC); \
     *return_value = *tmp; \
     zval_copy_ctor(return_value); \
+}
+
+#define GETTER_EX(obj, name, do_return) \
+    PHP_METHOD(obj, get##name)  \
+    { \
+        INIT_OBJECT\
+        do_return \
+    }
+
+#define GETTER(obj, name) GETTER_EX(obj, name, RETURN_LONG(object->name); )
+
 
 static httpParserObj * _httpparser_new()
 {
@@ -52,6 +59,7 @@ static httpParserObj * _httpparser_new()
     object = emalloc(sizeof(httpParserObj));
     memset(object, 0,  sizeof(httpParserObj));
     object->parser = emalloc(sizeof(http_parser));
+    object->type   = HTTP_BOTH;
 
     return object;
 }
@@ -96,6 +104,7 @@ PHP_METHOD(httpparser, parse)
     }
 
     object->parser->data = object;
+    object->status = 1;
     offset = http_parser_execute(object->parser, &httpSettings, buf, (size_t) len);
 
     if ((size_t)offset != (size_t)len) {
@@ -103,20 +112,8 @@ PHP_METHOD(httpparser, parse)
         RETURN_FALSE;
     }
 
-    zval * status_str;
-    status_str = zend_read_property(httpparser_ce, this, "status", 6, 0  TSRMLS_DC);
-    ZVAL_STRING(status_str, "working", 1);
     RETURN_TRUE;
 }
-
-PHP_METHOD(httpparser, getStatus)
-    GETTER("status")
-
-PHP_METHOD(httpparser, getParserType)
-    GETTER("type")
-
-PHP_METHOD(httpparser, getParts)
-    GETTER("parts")
 
 PHP_METHOD(httpparser, parseStr)
 {
@@ -189,22 +186,34 @@ zend_object_value httpparser_create_handler(zend_class_entry *class_type TSRMLS_
 
     MAKE_STD_ZVAL(obj->variable);
     array_init(obj->variable);
-    zend_hash_add(obj->this.properties, "parts", 6,  &obj->variable, sizeof(zval *), NULL);
     obj->free_variable = 1;
 
-    
     retval.handle   = zend_objects_store_put(obj, NULL, _httpparser_free_storage, NULL TSRMLS_CC);
     retval.handlers = &httpparser_object_handlers;
     
     return retval;
 }
 
+GETTER(httpparser,  status)
+GETTER(httpparser, type)
+GETTER_EX(httpparser, parts, *return_value = *object->variable; zval_copy_ctor(return_value); )
+GETTER_EX(httpparser, body,  {
+    zval ** value;
+    if (zend_hash_find(Z_ARRVAL_P(object->variable), "body", sizeof("body"), (void**)&value) == FAILURE) {
+        RETURN_FALSE;
+    }
+    *return_value = **value;
+    zval_copy_ctor(return_value); 
+})
+
 function_entry httpparser_methods[] = {
-    PHP_ME(httpparser, parse,     NULL,      ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
-    PHP_ME(httpparser, parseStr,     NULL,   ZEND_ACC_PUBLIC | ZEND_ACC_STATIC | ZEND_ACC_FINAL)
-    PHP_ME(httpparser, getParserType,     NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
-    PHP_ME(httpparser, getStatus,     NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
-    PHP_ME(httpparser, getParts,     NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
+    PHP_ME(httpparser, parse,     NULL, ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
+    PHP_ME(httpparser, parseStr,  NULL, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC | ZEND_ACC_FINAL)
+
+    PHP_ME(httpparser, gettype,   NULL, ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
+    PHP_ME(httpparser, getstatus, NULL, ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
+    PHP_ME(httpparser, getparts,     NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
+    PHP_ME(httpparser, getbody,     NULL,  ZEND_ACC_PUBLIC | ZEND_ACC_FINAL)
 
     // events
     ZEND_FENTRY(onMessageBegin,     NULL, NULL,  ZEND_ACC_PROTECTED | ZEND_ACC_ABSTRACT)
@@ -220,8 +229,11 @@ PHP_MINIT_FUNCTION(httpparser)
     httpparser_ce = zend_register_internal_class(&ce TSRMLS_CC);
     httpparser_ce->create_object = httpparser_create_handler;
 
-    zend_declare_property_string(httpparser_ce, ZEND_STRL("status"), "idle",   ZEND_ACC_PRIVATE TSRMLS_CC);
-    zend_declare_property_string(httpparser_ce, ZEND_STRL("type"), "both",  ZEND_ACC_PRIVATE TSRMLS_CC);
+    zend_declare_class_constant_long(httpparser_ce, ZEND_STRL("HTTP_BOTH"), HTTP_BOTH TSRMLS_CC);
+    zend_declare_class_constant_long(httpparser_ce, ZEND_STRL("HTTP_REQUEST"), HTTP_REQUEST TSRMLS_CC);
+    zend_declare_class_constant_long(httpparser_ce, ZEND_STRL("HTTP_RESPONSE"), HTTP_RESPONSE TSRMLS_CC);
+    zend_declare_class_constant_long(httpparser_ce, ZEND_STRL("FREE"), 0 TSRMLS_CC);
+    zend_declare_class_constant_long(httpparser_ce, ZEND_STRL("BUSY"), 1 TSRMLS_CC);
 
     INIT_CLASS_ENTRY(exception_ce, "httpparser_exception", NULL);
 

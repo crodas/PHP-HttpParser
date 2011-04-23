@@ -5,7 +5,7 @@ function get_random_response()
     $response = "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nWebserver: Foobar\r\nTransfer-Encoding: chunked\r\n\r\n";
 
     $body = '';
-    $len  = rand(1000000, 2000000);
+    $len  = rand(100000, 200000);
     for ($i=0; $i < $len; $i++) {
         $body .= chr(rand(0, 255));
     }

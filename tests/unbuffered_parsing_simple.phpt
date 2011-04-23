@@ -20,12 +20,12 @@ class CustomParser extends HttpParser
 
     protected function onHeadersComplete()
     {
-        var_dump($this->parts);
+        var_dump($this->getParts());
     }
 
     protected function onMessageComplete()
     {
-        var_dump($this->parts);
+        var_dump($this->getParts());
     }
 }
 
@@ -33,19 +33,19 @@ $parser = new CustomParser;
 
 list($header, $body) = explode("\n\n", $query, 2);
 
-var_dump($parser->getParserType());
-var_dump($parser->getStatus());
+var_dump($parser->getType() === CustomParser::HTTP_BOTH);
+var_dump($parser->getStatus() === CustomParser::FREE);
 foreach (explode("\n", $header) as $line) {
     $line = trim($line)."\r\n";
     $parser->parse($line);
 }
-var_dump($parser->getStatus());
+var_dump($parser->getStatus() === CustomParser::BUSY);
 $parser->parse("\r\n");
 $parser->parse($body);
 --EXPECTF--
-string(4) "both"
-string(4) "idle"
-string(7) "working"
+bool(true)
+bool(true)
+bool(true)
 array(4) {
   ["url"]=>
   string(16) "/path/script.cgi"

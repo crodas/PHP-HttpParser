@@ -21,11 +21,4 @@ $obj = new FooParser;
 var_dump($obj);
 --EXPECTF--
 object(FooParser)#%d (%d) {
-  ["status":"httpparser":private]=>
-  string(4) "idle"
-  ["type":"httpparser":private]=>
-  string(4) "both"
-  ["parts"]=>
-  array(0) {
-  }
 }

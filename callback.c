@@ -25,7 +25,7 @@
 #define CREATE_FUNCTION(type, callback) \
     static int CALLBACK_NAME(type) (http_parser * p, const char * buf, size_t len)  \
     { \
-        return callback(#type, p, buf, len); \
+        return callback(#type, sizeof(#type), p, buf, len); \
     } \
 
 #define FUNCTION(type) CREATE_FUNCTION(type, httpparser_assign)
@@ -60,23 +60,23 @@ static void strtolower(char * str, size_t len) {
     }   
 }
 
-static int httpparser_assign(char *type, http_parser *p, const char *buf, size_t len)
+static int httpparser_assign(char *type, int type_len, http_parser *p, const char *buf, size_t len)
 {
     httpParserObj * Parser;
     Parser = (httpParserObj *)p->data;
-    add_assoc_stringl(Parser->variable, type, buf, len, 1);
+    add_assoc_stringl_ex(Parser->variable, type, type_len, buf, len, 1);
     return 0;
 }
 
-static int httpparser_assign_ex(char *type, http_parser *p, const char *buf, size_t len)
+static int httpparser_assign_ex(char *type, int type_len, http_parser *p, const char *buf, size_t len)
 {
     zval * dest, **fnd;
     httpParserObj * Parser;
     Parser = (httpParserObj *)p->data;
-    if (zend_hash_find(Z_ARRVAL_P(Parser->variable), type, strlen(type)+1, (void**)&fnd) == FAILURE) {
+    if (zend_hash_find(Z_ARRVAL_P(Parser->variable), type, type_len, (void**)&fnd) == FAILURE) {
         ALLOC_INIT_ZVAL(dest);
         array_init(dest);
-        add_assoc_zval(Parser->variable, type, dest);
+        add_assoc_zval_ex(Parser->variable, type, type_len,  dest);
     } else {
         dest = *fnd;
     }
@@ -94,15 +94,15 @@ static int httpparser_assign_ex(char *type, http_parser *p, const char *buf, siz
     return 0;
 }
 
-static int httpparser_append(char *type, http_parser *p, const char *buf, size_t len)
+static int httpparser_append(char *type, int type_len, http_parser *p, const char *buf, size_t len)
 {
     zval * dest, **fnd;
     httpParserObj * Parser;
     Parser = (httpParserObj *)p->data;
-    if (zend_hash_find(Z_ARRVAL_P(Parser->variable), type, strlen(type)+1, (void**)&fnd) == FAILURE) {
+    if (zend_hash_find(Z_ARRVAL_P(Parser->variable), type, type_len, (void**)&fnd) == FAILURE) {
         ALLOC_INIT_ZVAL(dest);
         array_init(dest);
-        add_assoc_stringl(Parser->variable, type, buf, len, 1);
+        add_assoc_stringl_ex(Parser->variable, type, type_len, buf, len, 1);
     } else {
         dest = *fnd;
         convert_to_string(dest);
@@ -111,13 +111,12 @@ static int httpparser_append(char *type, http_parser *p, const char *buf, size_t
         Z_STRVAL_P(dest) = erealloc(Z_STRVAL_P(dest), Z_STRLEN_P(dest) + len + 1);
         memcpy(Z_STRVAL_P(dest) + Z_STRLEN_P(dest),  buf, len);
         Z_STRLEN_P(dest) += len;
-
     }
 
     return 0;
 }
 
-static int httpparser_callback(char *type, http_parser *p, const char * f, int len)
+static int httpparser_callback(char *type, int type_len, http_parser *p, const char * f, int len)
 {
     httpParserObj * Parser;
     zval foo;

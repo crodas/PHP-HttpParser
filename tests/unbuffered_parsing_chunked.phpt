@@ -13,13 +13,12 @@ class CustomParser extends HttpParser
 
     protected function onHeadersComplete()
     {
-        var_dump($this->parts);
+        var_dump($this->getParts());
     }
 
     protected function onMessageComplete()
     {
-        $this->parts['body'] = $this->parts['body'] === $this->expected_body;
-        var_dump($this->parts);
+        var_dump($this->getBody() === $this->expected_body);
     }
 }
 
@@ -56,25 +55,4 @@ array(2) {
     string(7) "chunked"
   }
 }
-array(3) {
-  ["header_field"]=>
-  array(3) {
-    [0]=>
-    string(12) "content-type"
-    [1]=>
-    string(9) "webserver"
-    [2]=>
-    string(17) "transfer-encoding"
-  }
-  ["header_value"]=>
-  array(3) {
-    [0]=>
-    string(10) "text/plain"
-    [1]=>
-    string(6) "Foobar"
-    [2]=>
-    string(7) "chunked"
-  }
-  ["body"]=>
-  bool(true)
-}
+bool(true)
